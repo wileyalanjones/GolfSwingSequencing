@@ -65,7 +65,11 @@ def get_num_frames(vid_path: str):
     
     return count 
 
-def get_random_clip_indexes(num_frames, clip_len):
+def get_random_clip_indexes(
+        num_frames, 
+        clip_len,
+        events=None,
+        buffer=20):
     """
     Parameters
     ----------
@@ -80,8 +84,17 @@ def get_random_clip_indexes(num_frames, clip_len):
         Frames numbers to capture for training.
 
     """
-    start = random.randint(0, num_frames-1)
+    if events is None:
+        start = random.randint(0, num_frames-1)
+        spread = np.arange(clip_len)
+        return (start + spread) % num_frames
+    
+    start_buffer = max(events[0] - buffer, 0)
+    end_buffer = min(num_frames-clip_len, events[-1] + buffer) 
+    
+    start = random.randint(start_buffer, end_buffer)
     spread = np.arange(clip_len)
+    
     return (start + spread) % num_frames
 
 def get_frames_by_idxs(vid_path, idxs):
@@ -157,13 +170,25 @@ def get_clip_labels(idxs, events):
             
     return np.array(labels, dtype=np.int32)
 
-def get_clip_weights(labels, background=.2, event=1.0):
+def get_clip_weights(labels, background=1, event=1):
+    """
+    Parameters
+    ----------
+    labels : TYPE
+        DESCRIPTION.
+    background : TYPE, optional
+        DESCRIPTION. The default is 1.
+    event : TYPE, optional
+        DESCRIPTION. The default is 1.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     weights = np.where(labels==0, background, event)
     return np.array(weights, dtype=np.float32) 
 
-if __name__=="__main__":
-    filename = "/Users/wileyjones/Desktop/CS435/GolfProject/GolfDB.pkl"
-    video_directory = "/Users/wileyjones/Desktop/CS435/GolfProject/videos_160"
-    df = pd.read_pickle(filename)
         
         
