@@ -1,0 +1,17 @@
+# Ignore everything
+*
+
+# But unignore directories, so Git can look inside them
+
+!*/
+
+# Unignore Python files
+!*.py
+!*.ipynb
+
+# Unignore data files (.csv and .pkl)
+!*.csv
+!*.pkl
+
+# Unignore the .gitignore file itself
+!.gitignore

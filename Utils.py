@@ -85,17 +85,20 @@ def get_random_clip_indexes(
 
     """
     if events is None:
-        start = random.randint(0, num_frames-1)
-        spread = np.arange(clip_len)
-        return (start + spread) % num_frames
-    
-    start_buffer = max(events[0] - buffer, 0)
-    end_buffer = min(num_frames-clip_len, events[-1] + buffer) 
-    
-    start = random.randint(start_buffer, end_buffer)
-    spread = np.arange(clip_len)
-    
-    return (start + spread) % num_frames
+        start = random.randint(0, max(0, num_frames - clip_len))
+        return start + np.arange(clip_len)
+
+    events = np.asarray(events, dtype=np.int32)  
+
+    start_buffer = max(int(events[0]) - buffer, 0)
+    end_buffer   = min(int(events[-1]) + buffer, num_frames - clip_len)
+
+    if end_buffer < start_buffer:
+        start = random.randint(0, max(0, num_frames - clip_len))
+    else:
+        start = random.randint(start_buffer, end_buffer)
+
+    return start + np.arange(clip_len)
 
 def get_frames_by_idxs(vid_path, idxs):
     """

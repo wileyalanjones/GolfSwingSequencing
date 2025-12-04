@@ -12,9 +12,12 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
-AUTOTUNE = tf.data.AUTOTUNE
+AUTOTUNE = tf.data.AUTOTUNE  
 
 class GolfDataset:
+    """
+    Dataset Object for Random Sampling of GolfDB Videos
+    """
     def __init__(
             self,
             dataframe,
@@ -45,7 +48,9 @@ class GolfDataset:
         return len(self.records) * self.repeat_per_video
         
     def gen(self):
-
+        """
+        Yields Random Segment of Video for Dataset
+        """
         for rec in self.records:
             for _ in range(self.repeat_per_video):
                 if self.train:
@@ -63,15 +68,12 @@ class GolfDataset:
 
                 yield frames, labels
                 
-def make_tf_ds(
-        dataset,
-        batch_size=2,
-        shuffle=True,
-        augment=True,
-        num_classes=9,
-        clip_len=None
-        ):
-    
+def make_tf_ds(dataset, batch_size=2, shuffle=True, 
+               augment=True, num_classes=9, clip_len=None):
+    """
+    Creates Dataset Tensor for Keras Model
+    """
+        
     if not clip_len:
         clip_len = dataset.clip_len
     
@@ -85,7 +87,7 @@ def make_tf_ds(
     if shuffle:
         ds = ds.shuffle(buffer_size=8*batch_size, reshuffle_each_iteration=True)
 
-    
+    # Augmentation for more robust training    
     aug = tf.keras.Sequential([ 
         tf.keras.layers.RandomFlip("horizontal"),
         tf.keras.layers.RandomZoom(.05),
@@ -93,27 +95,28 @@ def make_tf_ds(
         ]) 
     
     def augment_frames(x, y):
-        x = preprocess_input(x)
+        x = preprocess_input(x) # prepare frames for MobileNet
         if augment:
             x = aug(x)
         return x, y
     
     ds = ds.map(augment_frames, num_parallel_calls=AUTOTUNE)
     ds = ds.batch(batch_size, drop_remainder=True)
-    ds = ds.repeat()
+    ds = ds.repeat() 
     ds = ds.prefetch(AUTOTUNE)
     
     return ds 
 
 
 class FullVideoGolfDataset:
-
-    def __init__(self, dataframe, vid_dir, num_events=8, train=False):
+    """
+    Dataset Object for Full Video Validation, PCE 
+    """
+    def __init__(self, dataframe, vid_dir, num_events=8):
         self.id_to_events = ut.get_events_dataframe(dataframe, num_events)
         self.vid_dir = vid_dir
         self.num_events = num_events
-        self.train = train  # not really used here, kept for symmetry
-
+        
         self.records = []
         for vid in self.id_to_events.keys():
             vid_path = f"{self.vid_dir}/{vid}.mp4"
@@ -130,37 +133,32 @@ class FullVideoGolfDataset:
 
     def gen(self):
         """
-        Yields full sequences.
+        Yields full video frames and labels
         """
         for rec in self.records:
             T = rec["num_frames"]
 
-            # full-range indices [0, 1, ..., T-1]
             idxs = np.arange(T, dtype=np.int32)
 
             frames = ut.get_frames_by_idxs(rec["vid_path"], idxs)   # (T,H,W,C)
             labels = ut.get_clip_labels(idxs, rec["events"])        # (T,)
 
-            # cast to expected dtypes
             frames = frames.astype(np.float32)
             labels = labels.astype(np.int32)
 
             yield frames, labels
 
 
-def make_full_video_tf_ds(full_dataset, batch_size=1):
+def make_full_video_tf_ds(full_dataset):
     """
-    Creates a TF dataset that yields:
-        frames: (1, T, 160, 160, 3)
-        labels: (1, T)
-
-    batch_size should stay 1 because T varies per video.
+    Tensor Creator for full video validation
     """
-
-    output_sig = (
+    
+    # No Batching since clips are not uniform length
+    output_sig = ( 
         tf.TensorSpec(shape=(None, 160, 160, 3), dtype=tf.float32),
         tf.TensorSpec(shape=(None,), dtype=tf.int32),
-    )
+    )  
 
     ds = tf.data.Dataset.from_generator(full_dataset.gen, output_signature=output_sig)
 
@@ -169,6 +167,5 @@ def make_full_video_tf_ds(full_dataset, batch_size=1):
         return frames, labels
 
     ds = ds.map(preprocess, num_parallel_calls=AUTOTUNE)
-    ds = ds.batch(batch_size, drop_remainder=False)
 
     return ds.prefetch(AUTOTUNE)

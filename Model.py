@@ -9,7 +9,11 @@ Created on Sun Nov 16 18:33:35 2025
 from tensorflow.keras import layers, Model, applications
 
 def build_cnn_base(input_shape=(160,160, 3), trainable=False):
+    """
+    Base CNN for Model.
     
+    Input Shape = Deminsions of videos
+    """
     base_model = applications.MobileNetV2(
         input_shape=input_shape,
         include_top=False,
@@ -28,14 +32,18 @@ def build_LSTM(
         bidirectional=True, 
         dropout = .3,
         ):
-    
+    """
+    LSTM Heead for Model 
+
+    """
     input_layer = layers.Input(shape=(clip_len, *image_size), name="Clip")
     
     base = build_cnn_base(image_size, trainable=False)
     x = layers.TimeDistributed(base, name="cnn_base")(input_layer)
     
     if bidirectional:
-        x = layers.Bidirectional(layers.LSTM(units, return_sequences=True), name="Bi_Dir_LSTM")(x)
+        x = layers.Bidirectional(layers.LSTM(units, return_sequences=True), 
+                                 name="Bi_Dir_LSTM")(x)
     else:
         x = layers.LSTM(units, return_sequences=True, name="LSTM")(x)
         
