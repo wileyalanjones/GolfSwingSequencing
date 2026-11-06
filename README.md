@@ -10,31 +10,46 @@ The model treats swing-event detection as per-frame classification over a video 
 - **Temporal head** — a `TimeDistributed` wrapper applies the CNN to every frame in a clip, then a (bidirectional) LSTM models motion across time.
 - **Output** — a `TimeDistributed` Dense/softmax layer predicts one of 9 classes per frame: the 8 swing events plus a "no event" class.
 
-See `Model.py` for the architecture.
+See `golfswing/model.py` for the architecture.
 
 ## Repository layout
 
-| File | Purpose |
-|---|---|
-| `Model.py` | CNN + (Bi)LSTM model definition |
-| `GolfDataset.py` | Dataset/`tf.data` pipeline built from `GolfDB.pkl` and clip videos |
-| `Train.py` | Training loop, callbacks (checkpointing, TensorBoard, LR schedule, CSV logging) |
-| `Metrics.py` | Custom loss (`weighted_sparse_cce`) and metrics (event precision/recall/AUC) |
-| `TestVideo.py` | Loads, resizes, and center-crops an arbitrary video for inference; runs frame-by-frame event predictions |
-| `Utils.py` / `Visuals.py` | Helper and visualization utilities |
-| `golfDatabasePickle.py` | Builds `GolfDB.pkl` from `GolfDB.csv` |
-| `golfDatabaseDatasetVisualizationAndCleaning.py` | Exploration/cleaning of the GolfDB metadata |
-| `GolfDB.csv` / `GolfDB.pkl` | GolfDB metadata (clip labels, event frame indices) |
-| `scripts/download_data.py` | Fetches the preprocessed swing clips from the official GolfDB release |
-| `Copy_of_GolfSwingTrainingAndValidation.ipynb` | Notebook version of the training/validation workflow |
+```
+golfswing/        # the library
+  ├── model.py    # CNN + (Bi)LSTM model definition
+  ├── dataset.py  # Dataset / tf.data pipeline built from GolfDB.pkl and clips
+  ├── metrics.py  # Custom loss and event precision/recall/AUC metrics
+  ├── predict.py  # Video loading, cropping, and event-frame prediction
+  ├── utils.py    # Frame/event helper utilities
+  ├── visualize.py# Training-metric and PCE plotting utilities
+  └── data.py     # GolfDB loading and CSV -> pickle conversion
+
+scripts/
+  ├── train.py           # training entrypoint
+  ├── predict.py         # CLI for predicting events in a new video
+  └── download_data.py   # fetches the swing clips from GolfDB
+
+notebooks/
+  └── training_and_validation.ipynb   # original Colab experiment notebook
+
+data/
+  ├── GolfDB.csv         # GolfDB metadata (tracked)
+  └── GolfDB.pkl         # pickled metadata used for training (tracked)
+
+results/
+  └── *.csv              # example training-metric logs used by visualize.py
+```
 
 ## Requirements
 
 - Python 3.9+ and TensorFlow / Keras
 
 ```bash
-pip install -r requirements.txt
+pip install -e .          # installs the package + dependencies
 ```
+
+Alternatively, `pip install -r requirements.txt` installs just the
+dependencies without the package itself.
 
 ## Getting the data
 
@@ -45,7 +60,7 @@ repository; they are downloaded on demand from the official GolfDB release.
 python scripts/download_data.py
 ```
 
-This downloads and extracts the clips into `videos_160/`. The `GolfDB.pkl`
+This downloads and extracts the clips into `data/videos_160/`. The `GolfDB.pkl`
 metadata file (clip labels and event frame indices) is already included so
 training can start immediately once the clips are present.
 
@@ -55,23 +70,22 @@ training can start immediately once the clips are present.
 
 ```bash
 python scripts/download_data.py   # first time only
-python Train.py
+python scripts/train.py
 ```
 
-This reads `GolfDB.pkl` and the clips in `videos_160/`, splits train/test, and trains the CNN-LSTM model. Checkpoints are saved to `models/`, per-run TensorBoard logs to `logs/<run_id>/`, and a CSV metric log to `logs/`.
+This reads `data/GolfDB.pkl` and the clips in `data/videos_160/`, splits
+train/test, and trains the CNN-LSTM model. Checkpoints are saved to `models/`,
+per-run TensorBoard logs to `logs/<run_id>/`, and a CSV metric log to `logs/`.
 
-### Run on a new video
+### Predict on a new video
 
-```python
-from tensorflow.keras.models import load_model
-from TestVideo import TestVideo, compute_event_frames
-
-model = load_model("path/to/model.keras")
-video = TestVideo("path/to/swing.mp4")
-event_frames = compute_event_frames(model, video.frames)
+```bash
+python scripts/predict.py path/to/swing.mp4 path/to/model.keras
 ```
 
-`TestVideo` resizes and center-crops the input video to `160x160` and preprocesses it for MobileNetV2. `compute_event_frames` returns the predicted frame index for each of the 8 swing events.
+`predict.py` resizes and center-crops the input video to `160x160`, preprocesses
+it for MobileNetV2, and prints the predicted frame index for each of the 8 swing
+events.
 
 ## Dataset
 

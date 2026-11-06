@@ -1,4 +1,4 @@
-import Utils as ut
+from golfswing import utils as ut
 import tensorflow as tf
 import numpy as np
 import pandas as pd
