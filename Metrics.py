@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Nov 19 19:51:30 2025
-
-@author: wileyjones
-"""
-
 import tensorflow as tf
 import numpy as np
 

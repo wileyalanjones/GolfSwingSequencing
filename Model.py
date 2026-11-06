@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Nov 16 18:33:35 2025
-
-@author: wileyjones
-"""
-
 from tensorflow.keras import layers, Model, applications
 
 def build_cnn_base(input_shape=(160,160, 3), trainable=False):

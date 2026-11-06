@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Nov 16 18:53:25 2025
-
-@author: wileyjones
-"""
-
 import Model
 import GolfDataset as GD
 from sklearn.model_selection import train_test_split

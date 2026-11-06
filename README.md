@@ -83,4 +83,8 @@ Work in progress / research project — model architecture and training hyperpar
 
 ## License
 
-No license specified yet.
+This project's code is released under the [MIT License](LICENSE).
+
+The GolfDB dataset is © the original authors and is provided under a
+[Creative Commons Attribution-NonCommercial 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+license — see the [GolfDB repository](https://github.com/wmcnally/golfdb) for details.
