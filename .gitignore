@@ -1,17 +1,50 @@
-# Ignore everything
-*
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~
 
-# But unignore directories, so Git can look inside them
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
 
-!*/
+# Virtual environments
+.venv/
+venv/
+env/
 
-# Unignore Python files
-!*.py
-!*.ipynb
+# Jupyter / Colab
+.ipynb_checkpoints/
 
-# Unignore data files (.csv and .pkl)
-!*.csv
-!*.pkl
+# Dataset videos (large; fetched via scripts/download_data.py)
+videos_160/
+*.zip
 
-# Unignore the .gitignore file itself
-!.gitignore
+# Trained models & checkpoints
+models/
+*.keras
+*.h5
+*.hdf5
+*.pth
+*.pt
+*.ckpt
+
+# Training logs & tensorboard
+logs/
+*.log
+
+# Office / document artifacts (kept local, not tracked)
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.mat
+~$*
+
+# Personal working directories
+Misc/
+paper/
+TestVideos/
+*.MOV
+*.mov

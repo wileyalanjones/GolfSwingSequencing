@@ -1,0 +1,21 @@
+# Core ML framework
+tensorflow>=2.10
+
+# Numerical / data
+numpy
+pandas
+scikit-learn
+
+# Computer vision / video
+opencv-python
+moviepy
+
+# Plotting
+matplotlib
+seaborn
+
+# Training utilities
+focal-loss
+
+# Dataset download (Google Drive)
+gdown

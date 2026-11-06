@@ -25,26 +25,36 @@ See `Model.py` for the architecture.
 | `golfDatabasePickle.py` | Builds `GolfDB.pkl` from `GolfDB.csv` |
 | `golfDatabaseDatasetVisualizationAndCleaning.py` | Exploration/cleaning of the GolfDB metadata |
 | `GolfDB.csv` / `GolfDB.pkl` | GolfDB metadata (clip labels, event frame indices) |
-| `videos_160/` | Pre-processed (160x160) swing clips used for training |
+| `scripts/download_data.py` | Fetches the preprocessed swing clips from the official GolfDB release |
 | `Copy_of_GolfSwingTrainingAndValidation.ipynb` | Notebook version of the training/validation workflow |
 
 ## Requirements
 
-- Python 3
-- TensorFlow / Keras
-- pandas, numpy, scikit-learn
-- opencv-python
-- moviepy
+- Python 3.9+ and TensorFlow / Keras
 
 ```bash
-pip install tensorflow pandas numpy scikit-learn opencv-python moviepy
+pip install -r requirements.txt
 ```
+
+## Getting the data
+
+The preprocessed `160x160` swing clips (`~680 MB`) are **not** committed to this
+repository; they are downloaded on demand from the official GolfDB release.
+
+```bash
+python scripts/download_data.py
+```
+
+This downloads and extracts the clips into `videos_160/`. The `GolfDB.pkl`
+metadata file (clip labels and event frame indices) is already included so
+training can start immediately once the clips are present.
 
 ## Usage
 
 ### Train
 
 ```bash
+python scripts/download_data.py   # first time only
 python Train.py
 ```
 
