@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from tensorflow.keras import callbacks
-from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from keras import callbacks
+from keras.metrics import SparseCategoricalAccuracy
 
 from golfswing import metrics, model
 from golfswing.dataset import GolfDataset, make_tf_ds
@@ -53,7 +53,7 @@ def build_callbacks(log_root: Path, model_root: Path) -> list:
     reduce_lr = callbacks.ReduceLROnPlateau(
         monitor="val_event_auc_pr",
         factor=0.2,
-        patience=1,
+        patience=5,
         min_lr=0.00001,
     )
     csv_logger = callbacks.CSVLogger(str(LOG_ROOT / "M256_B1_C16.csv"), append=True)
@@ -99,7 +99,7 @@ def main() -> None:
             train_ds,
             validation_data=test_ds,
             epochs=1,
-            verbose=1,
+            verbose="1",
             steps_per_epoch=steps_per_epoch,
             validation_steps=validation_steps,
             callbacks=cbs,

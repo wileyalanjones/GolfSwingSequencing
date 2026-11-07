@@ -1,5 +1,6 @@
 # Core ML framework
 tensorflow>=2.10
+keras
 
 # Numerical / data
 numpy
@@ -8,7 +9,6 @@ scikit-learn
 
 # Computer vision / video
 opencv-python
-moviepy
 
 # Plotting
 matplotlib

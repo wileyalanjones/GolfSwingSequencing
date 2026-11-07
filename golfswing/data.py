@@ -43,7 +43,7 @@ def build_pickle(csv_path, pkl_path=None) -> pd.DataFrame:
 
     df = pd.read_csv(csv_path, index_col=0)
     df["events"] = df["events"].apply(_parse_int_list)
-    df["bbox"] = df["bbox"].apply(_parse_float_array)
+    df["bbox"] = df["bbox"].apply(_parse_float_array) # type: ignore
     df.to_pickle(pkl_path)
 
     return df

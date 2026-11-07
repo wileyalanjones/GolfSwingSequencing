@@ -1,8 +1,8 @@
 """Visualization utilities for training metrics and PCE results."""
 
 from pathlib import Path
-
 import matplotlib.pyplot as plt
+from matplotlib.container import BarContainer
 import pandas as pd
 import seaborn as sns
 
@@ -75,10 +75,10 @@ def plot_metric(final_df, column, title, ylabel=None, ylim=None):
 
 def plot_pce(pce_df):
     """Bar plot of PCE per swing sequence."""
-    ax = sns.barplot(pce_df, x="PCE", y="Sequence", hue="PCE", legend=None)
-    ax.set_ylabel(None)
+    ax = sns.barplot(pce_df, x="PCE", y="Sequence", hue="PCE")
     for bars in ax.containers:
-        ax.bar_label(bars, fmt="%.2f")
+        if isinstance(bars, BarContainer):
+            ax.bar_label(bars, fmt="%.2f")
     ax.margins(x=0.1)
     plt.title("PCE Results")
     return ax

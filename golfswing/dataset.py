@@ -2,7 +2,7 @@ from golfswing import utils as ut
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from keras.applications.mobilenet_v2 import preprocess_input
 
 AUTOTUNE = tf.data.AUTOTUNE  
 

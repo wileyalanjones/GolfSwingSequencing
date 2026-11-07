@@ -1,4 +1,4 @@
-from tensorflow.keras import layers, Model, applications
+from keras import layers, Model, applications
 
 def build_cnn_base(input_shape=(160,160, 3), trainable=False):
     """
@@ -34,8 +34,10 @@ def build_LSTM(
     x = layers.TimeDistributed(base, name="cnn_base")(input_layer)
     
     if bidirectional:
-        x = layers.Bidirectional(layers.LSTM(units, return_sequences=True), 
-                                 name="Bi_Dir_LSTM")(x)
+        x = layers.Bidirectional(
+            layers.LSTM(units, return_sequences=True), 
+            name="Bi_Dir_LSTM"
+        )(x)
     else:
         x = layers.LSTM(units, return_sequences=True, name="LSTM")(x)
         

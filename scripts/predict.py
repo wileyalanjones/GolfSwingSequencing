@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
 from golfswing import metrics as mt
 from golfswing.predict import TestVideo, compute_event_frames

@@ -38,7 +38,7 @@ def download_with_gdown(url: str, dest: Path) -> None:
         sys.exit(1)
 
     print(f"Downloading GolfDB videos to {dest} ...")
-    gdown.download(url, str(dest), quiet=False, fuzzy=True)
+    gdown.download(url, str(dest), quiet=False)
     if not dest.exists():
         print(f"Download failed: {dest} was not created.")
         sys.exit(1)

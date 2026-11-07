@@ -13,11 +13,11 @@ authors = [{ name = "Wiley Jones" }]
 keywords = ["golf", "deep-learning", "video", "tensorflow", "lstm", "action-recognition"]
 dependencies = [
     "tensorflow>=2.10",
+    "keras",
     "numpy",
     "pandas",
     "scikit-learn",
     "opencv-python",
-    "moviepy",
     "matplotlib",
     "seaborn",
     "focal-loss",

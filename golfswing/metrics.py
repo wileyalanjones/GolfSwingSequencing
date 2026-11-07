@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from typing import Literal
 
 CLASS_WEIGHTS = tf.constant([1.] + [35/8.]*8, dtype=tf.float32)
 
@@ -29,10 +30,8 @@ class EventPrecision(tf.keras.metrics.Precision):
         
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.int32)
-        
-        prob_back = y_pred[..., 0]
+        prob_back = tf.gather(y_pred, 0, axis=1)
         prob_event = 1.0 - prob_back
-        
         return super().update_state(y_true_bin, prob_event, sample_weight)
 
 class EventRecall(tf.keras.metrics.Recall):
@@ -46,8 +45,8 @@ class EventRecall(tf.keras.metrics.Recall):
         
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.int32)
-        
-        prob_back = y_pred[..., 0]
+
+        prob_back = tf.gather(y_pred, 0, axis=-1)
         prob_event = 1.0 - prob_back
         
         return super().update_state(y_true_bin, prob_event, sample_weight)
@@ -56,15 +55,15 @@ class EventAUC(tf.keras.metrics.AUC):
     """
     AUC over event vs background.
     """
-    def __init__(self, name="event_auc_pr", curve="PR", **kwargs):
+    def __init__(self, name="event_auc_pr", curve: Literal["ROC", "PR"] = "PR", **kwargs):
         super().__init__(name=name, curve=curve, **kwargs)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.float32)
 
-        prob_back = y_pred[..., 0]
-        prob_event = 1.0 - prob_back   # shape (...,)
+        prob_back = tf.gather(y_pred, 0, axis=-1)
+        prob_event = 1.0 - prob_back  
 
         return super().update_state(y_true_bin, prob_event, sample_weight)
     
