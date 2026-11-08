@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DEFAULT_PKL_PATH = DATA_DIR / "GolfDB.pkl"
@@ -20,6 +21,15 @@ def load_golfdb(pkl_path=None) -> pd.DataFrame:
     """Load the GolfDB metadata as a pandas DataFrame."""
     pkl_path = Path(pkl_path) if pkl_path is not None else DEFAULT_PKL_PATH
     return pd.read_pickle(pkl_path)
+
+
+def split_golfdb(dataframe, test_size=0.25, seed=42):
+    """Split GolfDB into train/test the same way every time.
+
+    Use this everywhere (training, evaluation) so every model is scored
+    on the same held-out videos.
+    """
+    return train_test_split(dataframe, test_size=test_size, random_state=seed)
 
 
 def _parse_int_list(value) -> list:

@@ -20,7 +20,7 @@ from golfswing.predict import (
 )
 
 
-MODEL_PATH = "models/weight_norm_loss_64_model_epoch_01_val_event_auc_pr0.3311.keras"
+MODEL_PATH = "models/weight_norm_loss_64_model_epoch_42_val_event_auc_pr0.2962.keras"
 state = {}
 
 @asynccontextmanager

@@ -16,6 +16,12 @@ seaborn
 
 # Training utilities
 focal-loss
+tensorboard
 
 # Dataset download (Google Drive)
 gdown
+
+# Web app
+fastapi
+uvicorn[standard]
+python-multipart

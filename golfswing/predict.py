@@ -2,63 +2,87 @@ import cv2
 import numpy as np
 from keras.applications.mobilenet_v2 import preprocess_input
 
+from golfswing.utils import ordered_event_frames
 
-def compute_all_frame_predictions(model, frames, clip_len=64):
+
+def predict_logits(model, frames, clip_len=64, stride=None, batch_size=4):
     """
-    Gives max prediction for each Event in Video
+    Runs the model over a whole video and returns one row of raw scores
+    (logits) per frame, shape (T, num_classes).
+
+    The video is cut into windows of ``clip_len`` frames that overlap by
+    ``clip_len - stride`` frames. A frame covered by several windows gets the
+    average of their scores, so frames near a window edge (where the LSTM has
+    less context) are not decided by that edge alone.
+
+    stride=None uses half a window. stride=clip_len gives plain
+    non-overlapping chunks.
+    """
+    frames = np.asarray(frames)
+    total = frames.shape[0]
+    if stride is None:
+        stride = max(clip_len // 2, 1)
+
+    if total <= clip_len:
+        starts = [0]
+    else:
+        starts = list(range(0, total - clip_len + 1, stride))
+        if starts[-1] != total - clip_len:   # make sure the last frames are covered
+            starts.append(total - clip_len)
+
+    score_sum = None
+    counts = np.zeros(total)
+
+    for b in range(0, len(starts), batch_size):
+        batch_starts = starts[b:b + batch_size]
+        windows = []
+        for s in batch_starts:
+            window = frames[s:s + clip_len]
+            if window.shape[0] < clip_len:   # video shorter than one window: zero-pad
+                pad = np.zeros((clip_len - window.shape[0], *window.shape[1:]), dtype=window.dtype)
+                window = np.concatenate([window, pad], axis=0)
+            windows.append(window)
+
+        logits = model.predict(np.stack(windows), verbose=0, batch_size=len(windows))
+
+        if score_sum is None:
+            score_sum = np.zeros((total, logits.shape[-1]))
+        for s, out in zip(batch_starts, logits):
+            n = min(clip_len, total - s)
+            score_sum[s:s + n] += out[:n]
+            counts[s:s + n] += 1
+
+    assert score_sum is not None
+    return score_sum / counts[:, None]
+
+
+def compute_all_frame_predictions(model, frames, clip_len=64, stride=None):
+    """
+    Gives the highest-scoring class for every frame in the video.
     
     For Confustion Matrix
     """
-    full_frames = frames.shape[0]
-    preds_full = []
+    all_frame_logits = predict_logits(model, frames, clip_len, stride)
 
-    for i in range(0, full_frames, clip_len):
-        clip = frames[i:i+clip_len]
-        original_clip_len = clip.shape[0]
-        if original_clip_len < clip_len:
-            pad_len = clip_len - original_clip_len
-            pad_shape = (pad_len, clip.shape[1], clip.shape[2], clip.shape[3])
-            clip = np.concatenate((clip, np.zeros(pad_shape, dtype=clip.dtype)), axis=0)
+    return np.argmax(all_frame_logits, axis=1)
 
-        clip = clip[None, ...]              # (1,clip_len,H,W,C)
-        probs = model.predict(clip, verbose=0)[0]  # (clip_len,9)
-        preds_full.append(probs[:original_clip_len])
 
-    all_frame_probabilities = np.concatenate(preds_full, axis=0)
-    
-    max_indices = np.argmax(all_frame_probabilities, axis=1)
-    
-    return max_indices
-
-def compute_event_frames(model, frames, clip_len=64, events=9):
+def compute_event_frames(model, frames, clip_len=64, events=9, ordered=True, stride=None):
     """
     Returns the frame numbers for the 8 Frames Events from Model
 
     For Unseen Video
+
+    ordered=True picks the 8 frames together so they are in swing order with
+    the highest total score. ordered=False picks each event's best frame
+    independently.
     """
-    full_frames = frames.shape[0]
-    preds_full = []
+    all_frame_logits = predict_logits(model, frames, clip_len, stride)[:, :events]
 
-    for i in range(0, full_frames, clip_len):
-        clip = frames[i:i+clip_len]
-        original_clip_len = clip.shape[0]
-        if original_clip_len < clip_len:
-            pad_len = clip_len - original_clip_len
-            pad_shape = (pad_len, clip.shape[1], clip.shape[2], clip.shape[3])
-            clip = np.concatenate((clip, np.zeros(pad_shape, dtype=clip.dtype)), axis=0)
+    if ordered:
+        return ordered_event_frames(all_frame_logits)
 
-        clip = clip[None, ...]              # (1,clip_len,H,W,C)
-        probs = model.predict(clip, verbose=0)[0]  # (clip_len,9)
-        preds_full.append(probs[:original_clip_len])
-
-    all_frame_probabilities = np.concatenate(preds_full, axis=0)
-    
-    event_frames_indices = []
-    for event_idx in range(1, events):
-        frame_idx_for_event = np.argmax(all_frame_probabilities[:, event_idx])
-        event_frames_indices.append(frame_idx_for_event)
-
-    return np.array(event_frames_indices)
+    return np.argmax(all_frame_logits[:, 1:], axis=0)
 
 def extract_frames(video_path, frame_indices):
     """

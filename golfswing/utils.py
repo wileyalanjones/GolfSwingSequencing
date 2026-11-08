@@ -4,6 +4,56 @@ import pandas as pd
 import tensorflow as tf
 import cv2
 
+def softmax(logits, axis=-1):
+    """
+    Turn raw model scores (logits) into probabilities along ``axis``.
+    """
+    logits = np.asarray(logits, dtype=np.float64)
+    shifted = logits - np.max(logits, axis=axis, keepdims=True)  # numerical stability
+    exp = np.exp(shifted)
+    return exp / np.sum(exp, axis=axis, keepdims=True)
+
+def ordered_event_frames(logits):
+    """
+    Pick one frame per event so the frames are in strictly increasing order
+    and the total score is as high as possible.
+
+    Parameters
+    ----------
+    logits : array of shape (T, 1 + K)
+        Per-frame scores. Column 0 is the "no event" class and is ignored;
+        columns 1..K are the K events, in swing order.
+
+    Returns
+    -------
+    np.array of K ints
+        Frame index for each event.
+    """
+    scores = np.asarray(logits, dtype=np.float64)[:, 1:]
+    T, K = scores.shape
+
+    if T < K:  # not enough frames to order them, fall back to independent picks
+        return np.argmax(scores, axis=0)
+
+    positions = np.arange(T)
+    best = np.full((K, T), -np.inf)       # best[k, t]: best total with event k at frame t
+    back = np.zeros((K, T), dtype=np.int64)
+    best[0] = scores[:, 0]
+
+    for k in range(1, K):
+        prev = best[k - 1]
+        run_max = np.maximum.accumulate(prev)                                     # best of event k-1 up to t
+        run_arg = np.maximum.accumulate(np.where(prev == run_max, positions, 0))  # where it happened
+        best[k, 1:] = scores[1:, k] + run_max[:-1]                                # event k-1 must be earlier
+        back[k, 1:] = run_arg[:-1]
+
+    frames = np.zeros(K, dtype=np.int64)
+    frames[-1] = int(np.argmax(best[-1]))
+    for k in range(K - 1, 0, -1):
+        frames[k - 1] = back[k, frames[k]]
+
+    return frames
+
 def get_events_dataframe(dataframe, num_events=8):
     """
     Parameters
@@ -140,7 +190,7 @@ def get_frames_by_idxs(vid_path, idxs):
     return np.stack(frames, axis=0)
 
 
-def get_clip_labels(idxs, events):
+def get_clip_labels(idxs, events, radius=0):
     """
     Parameters
     ----------
@@ -148,6 +198,9 @@ def get_clip_labels(idxs, events):
         clips numbers to match labels to frames.
     events :  List
         Event frame list.
+    radius : Integer
+        Frames within ``radius`` of an event also get that event's label
+        (the nearest event wins). 0 labels only the exact event frame.
 
     Returns
     -------
@@ -156,15 +209,16 @@ def get_clip_labels(idxs, events):
         T = Number of Frames per clip 
 
     """
-    labels = []
-    
-    for idx in idxs:
-        if idx in events:
-            labels.append(events.index(idx) + 1)
-        else:
-            labels.append(0)
-            
-    return np.array(labels, dtype=np.int32)
+    events = np.asarray(events, dtype=np.int64)
+    labels = np.zeros(len(idxs), dtype=np.int32)
+
+    for i, idx in enumerate(idxs):
+        dist = np.abs(events - int(idx))
+        nearest = int(np.argmin(dist))
+        if dist[nearest] <= radius:
+            labels[i] = nearest + 1
+
+    return labels
 
 def get_clip_weights(labels, background=1, event=1):
     """

@@ -43,12 +43,42 @@ def build_LSTM(
         
     x = layers.Dropout(dropout)(x)
     
-    out = layers.TimeDistributed(layers.Dense(num_classes, activation='softmax'), 
-                                 name="Output")(x)
+    out = layers.TimeDistributed(
+        layers.Dense(
+            num_classes, 
+            activation=None
+        ),                        
+        name="Output")(x)
     
     model = Model(input_layer, out, name="LSTM_Golf")
     
     return model 
+
+
+def set_cnn_trainable(model, num_layers=0):
+    """
+    Choose how much of the CNN backbone is trained.
+
+    num_layers=0 freezes the whole CNN (only the LSTM head trains).
+    num_layers=N unfreezes the last N CNN layers for fine-tuning. BatchNorm
+    layers stay frozen so their statistics are not disturbed.
+
+    Call model.compile(...) again after this, or the change is ignored.
+    Returns the number of trainable weight tensors in the whole model.
+    """
+    base = model.get_layer("cnn_base").layer
+
+    num_layers = max(int(num_layers), 0)
+    base.trainable = num_layers > 0
+
+    # Set every layer explicitly: setting base.trainable alone does not reliably
+    # reset layers that an earlier call froze or unfroze.
+    for i, layer in enumerate(base.layers):
+        in_tail = num_layers > 0 and i >= len(base.layers) - num_layers
+        layer.trainable = in_tail and not isinstance(layer, layers.BatchNormalization)
+
+    return len(model.trainable_weights)
+
 
 def load_trained_model(weights_path, clip_len=64, units=256, bidirectional=True):
     """

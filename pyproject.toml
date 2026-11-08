@@ -21,8 +21,12 @@ dependencies = [
     "matplotlib",
     "seaborn",
     "focal-loss",
+    "tensorboard",
     "gdown",
 ]
+
+[project.optional-dependencies]
+web = ["fastapi", "uvicorn[standard]", "python-multipart"]
 
 [tool.setuptools]
 packages = ["golfswing"]

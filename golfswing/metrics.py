@@ -2,10 +2,14 @@ import tensorflow as tf
 import numpy as np
 from typing import Literal
 
+from golfswing.predict import predict_logits
+from golfswing.utils import ordered_event_frames
+
+
 CLASS_WEIGHTS = tf.constant([1.] + [35/8.]*8, dtype=tf.float32)
 
 scce = tf.keras.losses.SparseCategoricalCrossentropy(
-    from_logits=False,
+    from_logits=True,
     reduction=tf.keras.losses.Reduction.NONE)
 
 def weighted_sparse_cce(y_true, y_pred):
@@ -30,7 +34,8 @@ class EventPrecision(tf.keras.metrics.Precision):
         
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.int32)
-        prob_back = tf.gather(y_pred, 0, axis=1)
+        probs = tf.nn.softmax(y_pred, axis=-1)  # model outputs logits
+        prob_back = tf.gather(probs, 0, axis=-1)
         prob_event = 1.0 - prob_back
         return super().update_state(y_true_bin, prob_event, sample_weight)
 
@@ -46,7 +51,8 @@ class EventRecall(tf.keras.metrics.Recall):
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.int32)
 
-        prob_back = tf.gather(y_pred, 0, axis=-1)
+        probs = tf.nn.softmax(y_pred, axis=-1)  # model outputs logits
+        prob_back = tf.gather(probs, 0, axis=-1)
         prob_event = 1.0 - prob_back
         
         return super().update_state(y_true_bin, prob_event, sample_weight)
@@ -62,14 +68,19 @@ class EventAUC(tf.keras.metrics.AUC):
         y_true = tf.cast(y_true, tf.int32)
         y_true_bin = tf.cast(tf.greater(y_true, 0), tf.float32)
 
-        prob_back = tf.gather(y_pred, 0, axis=-1)
-        prob_event = 1.0 - prob_back  
+        probs = tf.nn.softmax(y_pred, axis=-1)  # model outputs logits
+        prob_back = tf.gather(probs, 0, axis=-1)
+        prob_event = 1.0 - prob_back
 
         return super().update_state(y_true_bin, prob_event, sample_weight)
     
-def correct_preds(probs, labels, tol=-1):
+def correct_preds(scores, labels, tol=-1, ordered=True):
     """
     Determines if Model predictions are correct within tolerance
+
+    ``scores`` are the per-frame model scores, shape (T, 9). With
+    ordered=True the 8 event frames are picked together in swing order (the
+    same way the app picks them); otherwise each event is picked on its own.
     """
 
     events = np.where((labels > 0) & (labels < 9))[0]
@@ -82,8 +93,11 @@ def correct_preds(probs, labels, tol=-1):
     if tol == -1:
         tol = int(max(np.round((events[5] - events[0]) / 30), 1))
 
-    for i in range(len(events)):
-        preds[i] = np.argmax(probs[:, i + 1])  
+    if ordered and len(events) == scores.shape[1] - 1:
+        preds = ordered_event_frames(scores).astype(np.int32)
+    else:
+        for i in range(len(events)):
+            preds[i] = np.argmax(scores[:, i + 1])
 
     deltas = np.abs(events - preds)
     correct = (deltas <= tol).astype(np.uint8)
@@ -91,33 +105,19 @@ def correct_preds(probs, labels, tol=-1):
     return events, preds, deltas, tol, correct
 
 
-def compute_pce_for_video(model, frames_np, labels_np, clip_len=32):
+def compute_pce_for_video(model, frames_np, labels_np, clip_len=64,
+                          stride=None, ordered=True):
     """
-    Gets Model predictions in Clip Length segments and feeds to correct preds
+    Gets Model scores for the whole video (overlapping clip_len windows)
+    and feeds them to correct preds
     """
 
     # TF -> numpy
     if hasattr(frames_np, "numpy"): frames_np = frames_np.numpy()
     if hasattr(labels_np, "numpy"): labels_np = labels_np.numpy()
 
-    T = frames_np.shape[0]
-    probs_full = []
-
-    for start in range(0, T, clip_len):
-        end = min(start + clip_len, T)
-        clip = frames_np[start:end]          # (t,H,W,C)
-        t = clip.shape[0]
-
-        if t < clip_len:                    # add padding
-            pad = np.zeros((clip_len - t, *clip.shape[1:]), dtype=clip.dtype)
-            clip = np.concatenate([clip, pad], axis=0)
-
-        clip = clip[None, ...]              # (1,clip_len,H,W,C)
-        probs = model.predict(clip, verbose=0)[0]  # (clip_len,9)
-        probs_full.append(probs[:t])        # drop pad
-
-    probs_full = np.concatenate(probs_full, axis=0)
-    events, preds, deltas, tol, correct = correct_preds(probs_full, labels_np)
+    scores = predict_logits(model, frames_np, clip_len=clip_len, stride=stride)
+    events, preds, deltas, tol, correct = correct_preds(scores, labels_np, ordered=ordered)
 
     if correct.size == 0:
         return 0.0, correct, (events, preds, deltas, tol)
@@ -125,7 +125,8 @@ def compute_pce_for_video(model, frames_np, labels_np, clip_len=32):
     return float(np.mean(correct)), correct, (events, preds, deltas, tol)
 
 
-def compute_dataset_pce(model, full_video_dataset, clip_len=32):
+def compute_dataset_pce(model, full_video_dataset, clip_len=64,
+                        stride=None, ordered=True):
     """
     Gives the total PCE for all events and per event
     """
@@ -133,7 +134,8 @@ def compute_dataset_pce(model, full_video_dataset, clip_len=32):
     all_correct = []
     for frames_np, labels_np in full_video_dataset:
         pce_video, correct, _ = compute_pce_for_video(
-            model, frames_np, labels_np, clip_len=clip_len
+            model, frames_np, labels_np, clip_len=clip_len,
+            stride=stride, ordered=ordered
         )
         if correct.size > 0:
             all_correct.append(correct)

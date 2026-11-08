@@ -10,7 +10,7 @@ __pycache__/
 *.pyo
 
 # Virtual environments
-.venv/
+.venv*/
 venv/
 env/
 
@@ -48,3 +48,6 @@ paper/
 TestVideos/
 *.MOV
 *.mov
+
+# test files
+tests/

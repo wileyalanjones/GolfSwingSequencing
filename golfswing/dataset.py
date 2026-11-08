@@ -1,3 +1,5 @@
+from typing import cast
+
 from golfswing import utils as ut
 import tensorflow as tf
 import numpy as np
@@ -17,7 +19,8 @@ class GolfDataset:
             clip_len=64,
             num_events=8,
             train=True,
-            repeat_per_video=2
+            repeat_per_video=2,
+            label_radius=0
             ):
        
         self.id_to_events = ut.get_events_dataframe(dataframe, num_events)
@@ -26,6 +29,8 @@ class GolfDataset:
         self.num_events = num_events
         self.repeat_per_video = repeat_per_video
         self.train = train
+        # Only training clips get neighbor-frame labels; validation labels stay exact.
+        self.label_radius = label_radius if train else 0
     
         self.records = []
         for vid in self.id_to_events.keys():
@@ -56,7 +61,7 @@ class GolfDataset:
                         self.clip_len)
                 
                 frames = ut.get_frames_by_idxs(rec["vid_path"], idxs)
-                labels = ut.get_clip_labels(idxs, rec['events'])
+                labels = ut.get_clip_labels(idxs, rec['events'], self.label_radius)
 
                 yield frames, labels
                 
@@ -87,9 +92,13 @@ def make_tf_ds(dataset, batch_size=2, shuffle=True,
         ]) 
     
     def augment_frames(x, y):
-        x = preprocess_input(x) # prepare frames for MobileNet
+        x = cast(tf.Tensor, preprocess_input(x)) # prepare frames for MobileNet
         if augment:
+            x = tf.transpose(x, [1, 2, 0, 3])
+            x = tf.reshape(x, [160,160, clip_len * 3])
             x = aug(x)
+            x = tf.reshape(x, [160, 160, clip_len, 3])
+            x = tf.transpose(x, [2, 0, 1, 3])
         return x, y
     
     ds = ds.map(augment_frames, num_parallel_calls=AUTOTUNE)
