@@ -49,3 +49,16 @@ def build_LSTM(
     model = Model(input_layer, out, name="LSTM_Golf")
     
     return model 
+
+def load_trained_model(weights_path, clip_len=64, units=256, bidirectional=True):
+    """
+    Build the model, then load saved weights into it
+    The settings must match the ones the model was trained with.
+    """
+    model = build_LSTM(
+        clip_len=clip_len,
+        units=units,
+        bidirectional=bidirectional
+    )
+    model.load_weights(weights_path)
+    return model

@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from moviepy import VideoFileClip
 from keras.applications.mobilenet_v2 import preprocess_input
 
 
@@ -61,6 +60,25 @@ def compute_event_frames(model, frames, clip_len=64, events=9):
 
     return np.array(event_frames_indices)
 
+def extract_frames(video_path, frame_indices):
+    """
+    Grabs full-resolution frames from the original video.
+    Returns a list of images (BGR numpy arrays), one per frame index
+    """
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open video file {video_path}")
+    images = []
+    for idx in frame_indices:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
+        ret, frame = cap.read()
+        if not ret:
+            cap.release()
+            raise RuntimeError(f"Could not read frame {idx} from {video_path}")
+        images.append(frame)
+    cap.release()
+    return images
+
 
 class TestVideo:
     """
@@ -90,7 +108,7 @@ class TestVideo:
             ret, frame = cap.read()
             if not ret:
                 break
-            frame = cv2.cvtColor(frame, cv2.COLOR_BAYER_BG2RGB)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w, _ = frame.shape
             scale = min(target_h / h, target_w / w)
             new_w, new_h = round(w * scale), round(h * scale)
@@ -104,5 +122,6 @@ class TestVideo:
                 cv2.BORDER_CONSTANT, value=pad_color
             )
             frames.append(frame)
+        
         cap.release()
         return np.array(frames)
