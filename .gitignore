@@ -51,3 +51,6 @@ TestVideos/
 
 # test files
 tests/
+
+# Claud settings
+.claude/
