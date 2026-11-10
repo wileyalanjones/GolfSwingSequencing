@@ -1,14 +1,17 @@
 import type { SwingEvent } from "./types";
 import { useEffect } from "react";
+import { MdDownload } from "react-icons/md"
 
-type LightBocProps = {
+type LightBoxProps = {
     event: SwingEvent,
     open: boolean,
     onClose: () => void
 }
 
-export function LightBox({event, open, onClose}: LightBocProps) {   
+export function LightBox({event, open, onClose}: LightBoxProps) {   
     
+    const filename = `${event.event.toLowerCase().replace(/\s+/g, "-")}-frame-${event.frame}.jpg`
+
     useEffect(() => {
         console.log("lightbox mounted")
         return () => console.log("lightbox unmounted")
@@ -39,10 +42,18 @@ export function LightBox({event, open, onClose}: LightBocProps) {
                     alt={event.event}
                     className="max-h-[80vh] max-w-full rounded-lg object-contain"
                 />
-                <figcaption className="mt-3 text-white">
-                    <span className="font-semibold">{event.event}</span>
-                    <span className="text-gray-300"> (frame {event.frame})</span>
-                </figcaption>
+            <figcaption className="relative mt-3 w-full text-center text-white">
+                <span className="font-semibold">{event.event}</span>
+                <span className="text-gray-300"> (frame {event.frame})</span>
+                <a
+                href={event.image}
+                download={filename}
+                aria-label="Download image"
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 p-2 hover:bg-white/20"
+                >
+                <MdDownload size={20} />
+                </a>
+            </figcaption>
             </figure>
         </div>
     )

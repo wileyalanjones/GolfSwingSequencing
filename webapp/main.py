@@ -12,6 +12,7 @@ from fastapi import (
     UploadFile,
 )  
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from golfswing.model import load_trained_model                                                                                                                                                                 
 from golfswing.predict import (
     TestVideo, 
@@ -31,18 +32,18 @@ async def lifespan(app):
 
 app = FastAPI(lifespan=lifespan)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "frontend" / "dist"
+
+app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
 @app.get("/health")
 def health():
     return {"status":"ok"}
 
-
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-
 @app.get("/")
 async def home():
     return FileResponse(STATIC_DIR / "index.html")
-
 
 EVENT_NAMES = [
     "Address", "Toe-up", "Mid-backswing", "Top",
