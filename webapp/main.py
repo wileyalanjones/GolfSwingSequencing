@@ -45,7 +45,7 @@ async def home():
 
 
 EVENT_NAMES = [
-    "Address", "Top-up", "Mid-backswing", "Top",
+    "Address", "Toe-up", "Mid-backswing", "Top",
     "Mid-downswing", "Impact", "Mid-follow-through", "Finish"
 ]
 
