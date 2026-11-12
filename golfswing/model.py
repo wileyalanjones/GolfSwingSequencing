@@ -1,15 +1,18 @@
 from keras import layers, Model, applications
 
-def build_cnn_base(input_shape=(160,160, 3), trainable=False):
+def build_cnn_base(input_shape=(160,160, 3), trainable=False, weights="imagenet"):
     """
     Base CNN for Model.
-    
+
     Input Shape = Deminsions of videos
+    weights = "imagenet" (default, used for training) starts from pretrained
+        ImageNet weights. None builds the same architecture with random weights,
+        which is what you want when loading already-trained weights.
     """
     base_model = applications.MobileNetV2(
         input_shape=input_shape,
         include_top=False,
-        weights="imagenet",
+        weights=weights,
         pooling='avg',
         )
     base_model.trainable = trainable
@@ -23,14 +26,17 @@ def build_LSTM(
         units=128, 
         bidirectional=True, 
         dropout = .3,
+        cnn_weights="imagenet",
         ):
     """
-    LSTM Heead for Model 
+    LSTM Heead for Model
 
+    cnn_weights is passed to build_cnn_base ("imagenet" for training, None when
+    the trained weights will be loaded afterwards).
     """
     input_layer = layers.Input(shape=(clip_len, *image_size), name="Clip")
-    
-    base = build_cnn_base(image_size, trainable=False)
+
+    base = build_cnn_base(image_size, trainable=False, weights=cnn_weights)
     x = layers.TimeDistributed(base, name="cnn_base")(input_layer)
     
     if bidirectional:
@@ -84,11 +90,15 @@ def load_trained_model(weights_path, clip_len=64, units=256, bidirectional=True)
     """
     Build the model, then load saved weights into it
     The settings must match the ones the model was trained with.
+
+    The CNN is built without ImageNet weights: the saved weights overwrite all
+    of them anyway, so downloading them would only slow down startup.
     """
     model = build_LSTM(
         clip_len=clip_len,
         units=units,
-        bidirectional=bidirectional
+        bidirectional=bidirectional,
+        cnn_weights=None,
     )
     model.load_weights(weights_path)
     return model

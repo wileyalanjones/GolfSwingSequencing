@@ -21,7 +21,7 @@ from golfswing.predict import (
 )
 
 
-MODEL_PATH = "models/20261108-025410_best.weights.h5"
+MODEL_PATH = os.environ.get("MODEL_PATH",  "models/20261108-025410_best.weights.h5")
 state = {}
 
 @asynccontextmanager

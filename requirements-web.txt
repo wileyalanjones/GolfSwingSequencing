@@ -1,0 +1,18 @@
+# Runtime dependencies for the deployed web app only.
+# Training/dev extras live in requirements.txt.
+
+# ML
+tensorflow-cpu>=2.16,<3
+keras>=3.0
+
+# Numerical / data (golfswing/utils.py imports pandas)
+numpy
+pandas
+
+# Video (headless: no GUI/display libs needed on a server)
+opencv-python-headless
+
+# Web
+fastapi
+uvicorn[standard]
+python-multipart
