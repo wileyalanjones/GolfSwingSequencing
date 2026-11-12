@@ -2,8 +2,11 @@
 
 A deep learning model that detects the 8 key events of a golf swing (address, toe-up, mid-backswing, top, mid-downswing, impact, mid-follow-through, finish) directly from raw swing video, trained on the [GolfDB](https://github.com/wmcnally/golfdb) dataset. Includes a web app: upload a swing video and get the 8 event frames back, which you can enlarge and download.
 
-<!-- TODO: add a screenshot or GIF of the web app, e.g. docs/demo.gif -->
-![Web app demo](docs/demo.gif)
+
+
+https://github.com/user-attachments/assets/f5b1c51e-c681-4c69-a9cf-d96212fe609f
+
+
 
 **Live demo:** https://golfswing-928487452651.us-central1.run.app
 
