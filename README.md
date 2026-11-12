@@ -5,7 +5,9 @@ A deep learning model that detects the 8 key events of a golf swing (address, to
 <!-- TODO: add a screenshot or GIF of the web app, e.g. docs/demo.gif -->
 ![Web app demo](docs/demo.gif)
 
-**Live demo:** <!-- TODO: add link once deployed -->
+**Live demo:** https://golfswing-928487452651.us-central1.run.app
+
+> The demo runs on Google Cloud Run and scales to zero when idle, so the first request after a quiet period can take a minute or two while the model loads. Uploads are limited to 30 MB.
 
 ## How it works
 
@@ -29,11 +31,26 @@ The best checkpoint is chosen by **PCE** (Percentage of Correct Events) on whole
 
 ### Results
 
-<!-- TODO: fill in with your numbers from the final model -->
+PCE (Percentage of Correct Events) on the held-out GolfDB split (fixed seed). This is the same split used to pick the best checkpoint, so there is no separate untouched test set and the numbers may be slightly optimistic.
 
 | Metric | Value |
 | ------ | ----- |
-| PCE (test set) | _TODO_ |
+| **Overall PCE** | **0.743** |
+
+Per-event PCE:
+
+| Event | PCE |
+| ----- | --- |
+| Address | 0.17 |
+| Toe-up | 0.84 |
+| Mid-backswing | 0.87 |
+| Top | 0.81 |
+| Mid-downswing | 0.99 |
+| Impact | 0.99 |
+| Mid-follow-through | 0.98 |
+| Finish | 0.30 |
+
+The model is very accurate on the middle of the swing (mid-downswing through follow-through, ~0.98–0.99) but weak on the first and last events, address (0.17) and finish (0.30), which pull the overall score down.
 
 See `golfswing/model.py` for the architecture and `golfswing/metrics.py` for the loss and PCE implementation.
 
@@ -41,7 +58,7 @@ See `golfswing/model.py` for the architecture and `golfswing/metrics.py` for the
 
 The web app has a React + TypeScript + Tailwind frontend (`frontend/`) and a FastAPI backend (`webapp/`) that loads the trained model and exposes:
 
-- `POST /api/analyze` — accepts a video upload (`.mp4`, `.mov`, `.m4v`, `.avi`, up to 100 MB) and returns the 8 event frames as JPEGs with their frame indices.
+- `POST /api/analyze` — accepts a video upload (`.mp4`, `.mov`, `.m4v`, `.avi`, up to 30 MB) and returns the 8 event frames as JPEGs with their frame indices.
 - `GET /health` — health check.
 
 ### Run it
@@ -77,6 +94,39 @@ cd frontend && npm run dev
 ```
 
 Open http://localhost:5173.
+
+### Run it with Docker
+
+The `Dockerfile` builds the frontend, installs the web dependencies from `requirements-web.txt` (a slimmer list than `requirements.txt`, without training-only packages), downloads the trained weights from the `model-v1` GitHub release, and starts the server. No local weights file is needed.
+
+```bash
+docker build -t golfswing .
+docker run --rm -p 8000:8000 golfswing
+```
+
+Then open http://127.0.0.1:8000. The model path can be changed with the `MODEL_PATH` environment variable.
+
+## Deployment
+
+The live demo runs on [Google Cloud Run](https://cloud.google.com/run), built straight from the `Dockerfile`:
+
+```bash
+gcloud run deploy golfswing \
+  --source . \
+  --region us-central1 \
+  --memory 4Gi --cpu 2 \
+  --max-instances 2 \
+  --allow-unauthenticated \
+  --timeout 300
+```
+
+Notes from deploying:
+
+- **Memory:** TensorFlow plus the model exceeds 2 GiB under load, so the service needs at least 4 GiB.
+- **Upload limit:** Cloud Run rejects request bodies over 32 MB, so the app caps uploads at 30 MB.
+- **Cold starts:** the service scales to zero when idle. The first request after a quiet period loads TensorFlow and the model, which can take a minute or two; later requests take a few seconds.
+- **Cost control:** `--max-instances 2` caps scaling, and a billing budget alert is set on the project.
+- **Weights:** the trained weights (`model.weights.h5`, ~59 MB) are not stored in git. They are attached to the `model-v1` [GitHub release](https://github.com/wileyalanjones/GolfSwingSequencing/releases/tag/model-v1) and downloaded during the Docker build. To ship a retrained model, publish a new release and update the URL in the `Dockerfile`.
 
 ## Repository layout
 

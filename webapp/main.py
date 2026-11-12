@@ -51,7 +51,10 @@ EVENT_NAMES = [
 ]
 
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi"}
-MAX_UPLOAD_BYTES = 30 * 1024 * 1024 
+# Cloud Run rejects request bodies over 32 MB before they reach the app, so keep
+# our limit just under that to return a clear error instead of a platform one.
+MAX_UPLOAD_MB = 30
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 model_lock = threading.Lock()
 
 @app.post("/api/analyze")
@@ -66,7 +69,7 @@ def analyze(video: UploadFile = File(...)):
             while chunk := video.file.read(1024 * 1024):
                 size += len(chunk)
                 if size > MAX_UPLOAD_BYTES:
-                    raise HTTPException(413, "Video is too large (100 MB max)")
+                    raise HTTPException(413, f"Video is too large ({MAX_UPLOAD_MB} MB max)")
                 tmp.write(chunk)
         frames = TestVideo(tmp.name).frames
         with model_lock:
