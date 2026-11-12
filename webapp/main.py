@@ -51,7 +51,7 @@ EVENT_NAMES = [
 ]
 
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi"}
-MAX_UPLOAD_BYTES = 100 * 1024 * 1024 
+MAX_UPLOAD_BYTES = 30 * 1024 * 1024 
 model_lock = threading.Lock()
 
 @app.post("/api/analyze")
